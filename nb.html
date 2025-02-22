@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive notebook application with multiple themes and accessibility features">
+    <title>Enhanced Interactive Notebook</title>
+    <style>
+        :root {
+            --primary-color: #4a5568;
+            --secondary-color: #2d3748;
+            --text-color: #333;
+            --background-color: #f0f0f0;
+            --spacing-unit: 1rem;
+        }
+
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--background-color);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
+            color: var(--text-color);
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        .notebook-container {
+            position: relative;
+            width: 100%;
+            max-width: 1000px;
+            height: 80vh;
+            perspective: 2000px;
+            margin-top: 120px;
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 768px) {
+            .notebook-container {
+                height: 70vh;
+                margin-top: 150px;
+            }
+
+            .toolbar {
+                flex-wrap: wrap;
+            }
+
+            .search-container {
+                top: -120px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .controls {
+                flex-direction: column;
+            }
+
+            .toolbar select {
+                width: 100%;
+            }
+        }
+
+        .notebook {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transform-origin: center;
+        }
+
+        .page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 1px solid #ddd;
+            padding: calc(var(--spacing-unit) * 2);
+            box-sizing: border-box;
+            transform-origin: left;
+            transition: transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+            overflow-y: auto;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Enhanced Theme Styles */
+        .theme-classic {
+            background: #fff;
+            background-image: linear-gradient(#eee 1px, transparent 1px);
+            background-size: 100% 25px;
+            color: #333;
+        }
+
+        .theme-dark {
+            background: #2d3748;
+            background-image: linear-gradient(#4a5568 1px, transparent 1px);
+            background-size: 100% 25px;
+            color: #e2e8f0;
+        }
+
+        .theme-vintage {
+            background: #fdf6e3;
+            background-image: linear-gradient(#eee8d5 1px, transparent 1px);
+            background-size: 100% 25px;
+            color: #657b83;
+        }
+
+        /* Enhanced Visual Hierarchy */
+        .message {
+            margin-bottom: var(--spacing-unit);
+            padding: var(--spacing-unit);
+            border-radius: 4px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .message:focus-within {
+            outline: 2px solid var(--primary-color);
+        }
+
+        .message-timestamp {
+            font-size: 0.875rem;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Accessibility Enhancements */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: var(--spacing-unit);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.2);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: white;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: var(--secondary-color);
+        }
+
+        button:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.4);
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            background: #e2e8f0;
+        }
+
+        .status-message.success {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .status-message.error {
+            background: #fed7d7;
+            color: #c53030;
+        }
+    </style>
+</head>
+<body>
+    <body>
+        <div id="auth-container" class="auth-container">
+            <h1>My Notebook</h1>
+            <div id="login-form" class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" required aria-required="true">
+                <label for="password">Password</label>
+                <input type="password" id="password" required aria-required="true">
+                <button onclick="handleAuth()" id="auth-button">Login</button>
+                <p id="auth-message" class="status-message" role="status" aria-live="polite"></p>
+            </div>
+        </div>
+    
+        <div id="main-container" class="main-container" style="display: none;">
+            <div class="search-container">
+                <input type="text" id="search-input" class="search-input" placeholder="Search messages...">
+                <button onclick="searchMessages()">Search</button>
+            </div>
+            
+            <div class="toolbar">
+                <select id="theme-selector" onchange="changeTheme()">
+                    <option value="classic">Classic</option>
+                    <option value="dark">Dark</option>
+                    <option value="vintage">Vintage</option>
+                </select>
+                <select id="style-selector">
+                    <option value="normal">Normal</option>
+                    <option value="bold">Bold</option>
+                    <option value="italic">Italic</option>
+                    <option value="underline">Underline</option>
+                    <option value="highlight">Highlight</option>
+                </select>
+            </div>
+    
+            <div class="notebook-container">
+                <div class="notebook" id="notebook">
+                    <div class="page theme-classic" id="current-page">
+                        <div class="page-content">
+                            <textarea id="new-message" placeholder="Write your message here..."></textarea>
+                            <button onclick="addMessage()">Add Message</button>
+                        </div>
+                        <div id="messages"></div>
+                        <div class="page-number">Page <span id="page-number">1</span></div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button onclick="previousPage()">Previous Page</button>
+                    <button onclick="nextPage()">Next Page</button>
+                </div>
+            </div>
+        </div>
+    <script>
+        let currentPage = 1;
+        let messages = {};
+        let searchResults = [];
+        let currentSearchIndex = -1;
+        let currentUser = null;
+        let notebookStorage = null;
+
+        // Enhanced data structure for messages
+        class NotebookStorage {
+            constructor(userId) {
+                this.userId = userId;
+                this.storageKey = `notebook-messages-${userId}`;
+            }
+
+            getMessages() {
+                return JSON.parse(localStorage.getItem(this.storageKey)) || {};
+            }
+
+            setMessages(messages) {
+                localStorage.setItem(this.storageKey, JSON.stringify(messages));
+            }
+
+            addMessage(pageNumber, message) {
+                const messages = this.getMessages();
+                if (!messages[pageNumber]) {
+                    messages[pageNumber] = [];
+                }
+                messages[pageNumber].push({
+                    ...message,
+                    id: Date.now().toString(),
+                    timestamp: new Date().toISOString(),
+                    userId: this.userId
+                });
+                this.setMessages(messages);
+            }
+
+            searchMessages(query) {
+                const messages = this.getMessages();
+                const results = [];
+                
+                Object.entries(messages).forEach(([pageNum, pageMessages]) => {
+                    pageMessages.forEach((msg, index) => {
+                        if (msg.content.toLowerCase().includes(query.toLowerCase())) {
+                            results.push({
+                                page: parseInt(pageNum),
+                                messageIndex: index,
+                                message: msg
+                            });
+                        }
+                    });
+                });
+                
+                return results;
+            }
+        }
+
+        // Page Content Management
+        function updatePageContent() {
+            const messagesContainer = document.getElementById('messages');
+            if (!messagesContainer) return;
+
+            const pageMessages = messages[currentPage] || [];
+            messagesContainer.innerHTML = pageMessages.map(msg => `
+                <div class="message ${msg.style || ''}" tabindex="0">
+                    <div class="message-timestamp">${formatDate(msg.timestamp)}</div>
+                    <div>${msg.content}</div>
+                </div>
+            `).join('');
+            
+            const pageNumber = document.getElementById('page-number');
+            if (pageNumber) {
+                pageNumber.textContent = currentPage;
+            }
+        }
+
+        function formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        }
+
+        // Navigation Functions
+        function flipPage(direction) {
+            const page = document.getElementById('current-page');
+            if (!page) return;
+            
+            page.style.transform = `rotateY(${direction === 'next' ? '-180deg' : '0deg'})`;
+            
+            setTimeout(() => {
+                if (direction === 'next') {
+                    currentPage++;
+                } else if (currentPage > 1) {
+                    currentPage--;
+                }
+                page.style.transform = 'rotateY(0deg)';
+                updatePageContent();
+                announceToScreenReader(`Navigated to page ${currentPage}`);
+            }, 300);
+        }
+
+        function nextPage() {
+            flipPage('next');
+        }
+
+        function previousPage() {
+            flipPage('prev');
+        }
+
+        function handleAuth() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (username && password) {
+                currentUser = username;
+                notebookStorage = new NotebookStorage(username);
+                
+                document.getElementById('auth-container').style.display = 'none';
+                document.getElementById('main-container').style.display = 'block';
+                
+                initializeNotebook();
+                showStatusMessage(`Welcome back, ${username}!`, 'success');
+            } else {
+                showStatusMessage('Please enter both username and password', 'error');
+            }
+        }
+
+        function initializeNotebook() {
+            messages = notebookStorage.getMessages();
+            updatePageContent();
+            
+            if (!messages[1] || messages[1].length === 0) {
+                notebookStorage.addMessage(1, {
+                    content: `Welcome to your personal notebook, ${currentUser}!`,
+                    style: 'style-bold',
+                    timestamp: new Date().toISOString()
+                });
+                messages = notebookStorage.getMessages();
+                updatePageContent();
+            }
+        }
+
+        function addMessage() {
+            const textarea = document.getElementById('new-message');
+            const styleSelector = document.getElementById('style-selector');
+            const message = textarea.value.trim();
+            
+            if (message) {
+                notebookStorage.addMessage(currentPage, {
+                    content: message,
+                    style: `style-${styleSelector.value}`
+                });
+                
+                messages = notebookStorage.getMessages();
+                textarea.value = '';
+                updatePageContent();
+                showStatusMessage('Message added successfully', 'success');
+            }
+        }
+        function changeTheme() {
+            const theme = document.getElementById('theme-selector').value;
+            const page = document.getElementById('current-page');
+            if (page) {
+                page.className = `page theme-${theme}`;
+            }
+        }
+
+        function showStatusMessage(message, type) {
+            const statusElement = document.createElement('div');
+            statusElement.className = `status-message ${type}`;
+            statusElement.textContent = message;
+            statusElement.setAttribute('role', 'alert');
+            
+            const container = document.querySelector('.notebook-container');
+            container.insertBefore(statusElement, container.firstChild);
+            
+            setTimeout(() => {
+                statusElement.remove();
+            }, 3000);
+        }
+
+        // Accessibility
+        function announceToScreenReader(message) {
+            const announcement = document.createElement('div');
+            announcement.setAttribute('aria-live', 'polite');
+            announcement.classList.add('visually-hidden');
+            document.body.appendChild(announcement);
+            
+            setTimeout(() => {
+                announcement.textContent = message;
+                setTimeout(() => document.body.removeChild(announcement), 1000);
+            }, 100);
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight') {
+                    nextPage();
+                } else if (e.key === 'ArrowLeft') {
+                    previousPage();
+                } else if (e.key === 'Enter' && e.ctrlKey) {
+                    addMessage();
+                }
+            });
+
+            // Add ARIA labels
+            const elements = document.querySelectorAll('button, input, select, textarea');
+            elements.forEach(element => {
+                if (!element.getAttribute('aria-label')) {
+                    element.setAttribute('aria-label', element.textContent || element.placeholder);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
